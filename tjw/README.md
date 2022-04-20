@@ -8,7 +8,7 @@ geth: (此处为什么代码不能显示出来呢)
 设置GO环境，使用build/ci.go 来安装geth（应该即编译）  
 The ci command is called from Continuous Integration scripts. 
 
-### 22/3/19
+### 22/4/19
 1. 首先在服务器上安装时出现关于ed25519.go算法的问题，最终通过更新golang版本得以解决；  
 原本1.12或1.16都存在问题，更新到1.18.1问题消失。  
 更新方法参考golang.google.cn/doc/install，删除原文件再解压安装包到原位置。  
@@ -22,3 +22,17 @@ make: *** [Makefile:12: geth] Error 1
 找到问题：之前在自己创建的go-ethereum-modified项目中最开始随手上传了一个hashzero.go，其中package是main。
 最终影响了程序中的其他关系，虽不知整体原因。
 删除后得以正常编译make geth。
+
+
+### **22/4/20**
+
+installation instruction:
+
+1. please download golang(go) language first, detailed at: https://golang.google.cn/doc/install;
+2. get go-ethereum-modified project from github.com/Twerewolf;
+3. run ****make geth**** at the root of project;
+    1. if downloading package meets some trouble, might try change proxy use: 
+        
+        `$export GOPROXY="[https://goproxy.cn](https://goproxy.cn/)"`
+        
+4. use scripts from tjw/privatechain ,detailed info from the readme in that dir.

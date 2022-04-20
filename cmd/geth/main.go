@@ -203,7 +203,7 @@ var (
 )
 
 func init() {
-	fmt.Println("********************this is cmd/geth/main.go/init()********************")
+	// fmt.Println("********************this is cmd/geth/main.go/init()********************")
 	// Initialize the CLI app and start Geth
 	app.Action = geth
 	app.HideVersion = true // we have a command to print the version
@@ -259,7 +259,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("********************this is cmd/geth/main.go/main()********************")
+	// fmt.Println("********************TJW: this is cmd/geth/main.go/main()********************")
 	log.Info("TJW**start from geth/main function**")
 	log.Info("Starting Geth on Ethereum mainnet...")
 	//log.Output("TJW: start from geth/main()", log.LvlTrace, 1)
@@ -274,6 +274,7 @@ func main() {
 // This function should be called before launching devp2p stack.
 func prepare(ctx *cli.Context) {
 	// If we're running a known preset, log it for convenience.
+	fmt.Println("********************this is cmd/geth/main.go/prepare()********************")
 	switch {
 	case ctx.GlobalIsSet(utils.RopstenFlag.Name):
 		log.Info("Starting Geth on Ropsten testnet...")
@@ -316,7 +317,7 @@ func prepare(ctx *cli.Context) {
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func geth(ctx *cli.Context) error {
-	fmt.Println("********************this is cmd/geth/main.go/geth()********************") // add to show running stack
+	// fmt.Println("********************this is cmd/geth/main.go/geth()********************") // add to show running stack
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
