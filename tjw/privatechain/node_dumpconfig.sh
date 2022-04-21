@@ -4,7 +4,8 @@
 GETHPATH=../../build/bin
 
 $GETHPATH/geth --datadir . --networkid 224 \
---port 30311 --nodiscover \
+--port 30311 \
+--nodiscover \
 --ipcpath ./blockchain/geth.ipc \
 --http  \
 --miner.gasprice 1 \
