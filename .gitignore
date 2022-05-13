@@ -53,3 +53,5 @@ profile.cov
 *.ipynb
 blockchain_backup*
 */**/geth/
+UTC*
+history

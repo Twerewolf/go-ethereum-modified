@@ -272,6 +272,8 @@ func (st *StateTransition) preCheck() error {
 //
 // However if any consensus issue encountered, return the error directly with
 // nil evm execution result.
+// TJW:此处按照 https://willzhuang.github.io/2019/03/20/evm%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/
+// 介绍应该是vm调用的入口
 func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// First check this message satisfies all consensus rules before
 	// applying the message. The rules include these clauses
