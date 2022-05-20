@@ -57,6 +57,7 @@ import (
 var client *simulations.Client
 
 func main() {
+	// 所有app都用cli模板：package cli ("gopkg.in/urfave/cli.v1")
 	app := cli.NewApp()
 	app.Usage = "devp2p simulation command-line client"
 	app.Flags = []cli.Flag{
@@ -68,14 +69,14 @@ func main() {
 		},
 	}
 	app.Before = func(ctx *cli.Context) error {
-		client = simulations.NewClient(ctx.GlobalString("api"))
+		client = simulations.NewClient(ctx.GlobalString("api")) //run之前先创建出client实例
 		return nil
 	}
 	app.Commands = []cli.Command{
 		{
 			Name:   "show",
 			Usage:  "show network information",
-			Action: showNetwork,
+			Action: showNetwork, //Action对应func
 		},
 		{
 			Name:   "events",
@@ -106,7 +107,7 @@ func main() {
 		{
 			Name:   "node",
 			Usage:  "manage simulation nodes",
-			Action: listNodes,
+			Action: listNodes, //直接输入node 和加上list 执行的方法都是listNodes
 			Subcommands: []cli.Command{
 				{
 					Name:   "list",
@@ -186,11 +187,12 @@ func main() {
 	}
 }
 
+//show command
 func showNetwork(ctx *cli.Context) error {
-	if len(ctx.Args()) != 0 {
+	if len(ctx.Args()) != 0 { //通用help show
 		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 	}
-	network, err := client.GetNetwork()
+	network, err := client.GetNetwork() //从client执行getnetwork函数
 	if err != nil {
 		return err
 	}
