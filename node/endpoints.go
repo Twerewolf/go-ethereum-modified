@@ -25,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-// StartHTTPEndpoint starts the HTTP RPC endpoint.
+// StartHTTPEndpoint starts the HTTP RPC endpoint.终点
 func StartHTTPEndpoint(endpoint string, timeouts rpc.HTTPTimeouts, handler http.Handler) (*http.Server, net.Addr, error) {
 	// start the HTTP listener
 	var (
@@ -53,7 +53,7 @@ func StartHTTPEndpoint(endpoint string, timeouts rpc.HTTPTimeouts, handler http.
 // the registration of this "rpc" module happens in NewServer() and is thus common to all endpoints.
 func checkModuleAvailability(modules []string, apis []rpc.API) (bad, available []string) {
 	availableSet := make(map[string]struct{})
-	for _, api := range apis {
+	for _, api := range apis { //参数1是当前编号，编号不会使用所以舍弃
 		if _, ok := availableSet[api.Namespace]; !ok {
 			availableSet[api.Namespace] = struct{}{}
 			available = append(available, api.Namespace)
@@ -61,13 +61,14 @@ func checkModuleAvailability(modules []string, apis []rpc.API) (bad, available [
 	}
 	for _, name := range modules {
 		if _, ok := availableSet[name]; !ok && name != rpc.MetadataApi {
-			bad = append(bad, name)
+			bad = append(bad, name) //在bad列表增加一项name
 		}
 	}
 	return bad, available
 }
 
 // CheckTimeouts ensures that timeout values are meaningful
+// read/write/Idle时延不大于1s
 func CheckTimeouts(timeouts *rpc.HTTPTimeouts) {
 	if timeouts.ReadTimeout < time.Second {
 		log.Warn("Sanitizing invalid HTTP read timeout", "provided", timeouts.ReadTimeout, "updated", rpc.DefaultHTTPTimeouts.ReadTimeout)

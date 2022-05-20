@@ -45,6 +45,10 @@ Creating a Node allocates basic resources such as the data directory and returns
 in its INITIALIZING state. Lifecycle objects, RPC APIs and peer-to-peer networking
 protocols can be registered in this state. Basic operations such as opening a key-value
 database are permitted while initializing.
+重新创建节点会分配基本资源（如数据目录）并返回节点
+处于初始化状态。生命周期对象、RPC API 和对等网络
+协议可以在此状态下注册。基本操作，如打开键值
+初始化时允许数据库。
 
 Once everything is registered, the node can be started, which moves it into the RUNNING
 state. Starting the node starts all registered Lifecycle objects and enables RPC and
@@ -122,6 +126,6 @@ directory. Node instance A opens the database "db", node instance B opens the da
             db/                -- LevelDB content for "db"
             db-2/              -- LevelDB content for "db-2"
         B.ipc                  -- JSON-RPC UNIX domain socket endpoint of instance B
-        keystore/              -- account key store, used by both instances
+        keystore/              -- account key store, used by both instances公用的密钥库
 */
 package node

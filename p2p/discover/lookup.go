@@ -26,6 +26,9 @@ import (
 // lookup performs a network search for nodes close to the given target. It approaches the
 // target by querying nodes that are closer to it on each iteration. The given target does
 // not need to be an actual node identifier.
+//查找对靠近给定目标的节点执行网络搜索。它接近
+//通过在每次迭代中查询离它更近的节点来定位。给定的目标
+//不需要是实际的节点标识符。
 type lookup struct {
 	tab         *Table
 	queryfunc   func(*node) ([]*node, error)

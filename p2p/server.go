@@ -15,6 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package p2p implements the Ethereum p2p network protocols.
+//包p2p实现了以太坊p2p网络协议。
 package p2p
 
 import (
@@ -159,6 +160,7 @@ type Config struct {
 }
 
 // Server manages all peer connections.
+// Server是一个管理所有peer连接
 type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
@@ -218,6 +220,7 @@ const (
 
 // conn wraps a network connection with information gathered
 // during the two handshakes.
+//conn 使用在两次握手期间收集的信息包装网络连接
 type conn struct {
 	fd net.Conn
 	transport
@@ -320,7 +323,7 @@ func (srv *Server) PeerCount() int {
 // the server will connect to the node. If the connection fails for any reason, the server
 // will attempt to reconnect the peer.
 func (srv *Server) AddPeer(node *enode.Node) {
-	srv.dialsched.addStatic(node)
+	srv.dialsched.addStatic(node) //增加到staticPeer的channel中
 }
 
 // RemovePeer removes a node from the static node set. It also disconnects from the given

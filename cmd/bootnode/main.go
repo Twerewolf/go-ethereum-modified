@@ -49,7 +49,7 @@ func main() {
 		nodeKey *ecdsa.PrivateKey
 		err     error
 	)
-	flag.Parse()
+	flag.Parse() //解析os args
 
 	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
 	glogger.Verbosity(log.Lvl(*verbosity))
@@ -118,7 +118,7 @@ func main() {
 		}
 	}
 
-	printNotice(&nodeKey.PublicKey, *realaddr)
+	printNotice(&nodeKey.PublicKey, *realaddr) //输出相关参数
 
 	db, _ := enode.OpenDB("")
 	ln := enode.NewLocalNode(db, nodeKey)
@@ -139,12 +139,13 @@ func main() {
 	select {}
 }
 
+// 输出notice，当前是bootnode
 func printNotice(nodeKey *ecdsa.PublicKey, addr net.UDPAddr) {
 	if addr.IP.IsUnspecified() {
 		addr.IP = net.IP{127, 0, 0, 1}
 	}
-	n := enode.NewV4(nodeKey, addr.IP, 0, addr.Port)
-	fmt.Println(n.URLv4())
+	n := enode.NewV4(nodeKey, addr.IP, 0, addr.Port) // node
+	fmt.Println(n.URLv4())                           // 输出node的enode.url
 	fmt.Println("Note: you're using cmd/bootnode, a developer tool.")
 	fmt.Println("We recommend using a regular node as bootstrap node for production deployments.")
 }

@@ -55,3 +55,7 @@ blockchain_backup*
 */**/geth/
 UTC*
 history
+*main*
+*.exe
+*.svg
+*.puml

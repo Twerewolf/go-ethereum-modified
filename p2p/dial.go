@@ -99,7 +99,7 @@ type dialScheduler struct {
 	ctx         context.Context
 	nodesIn     chan *enode.Node
 	doneCh      chan *dialTask
-	addStaticCh chan *enode.Node
+	addStaticCh chan *enode.Node //？？？
 	remStaticCh chan *enode.Node
 	addPeerCh   chan *conn
 	remPeerCh   chan *conn

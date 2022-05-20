@@ -193,8 +193,8 @@ func Expired(ts uint64) bool {
 
 const (
 	macSize  = 32
-	sigSize  = crypto.SignatureLength
-	headSize = macSize + sigSize // space of packet frame data
+	sigSize  = crypto.SignatureLength // predifined sigsize 65
+	headSize = macSize + sigSize      // space of packet frame data
 )
 
 var (

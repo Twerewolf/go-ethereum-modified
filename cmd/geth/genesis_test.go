@@ -75,14 +75,15 @@ func TestCustomGenesis(t *testing.T) {
 	for i, tt := range customGenesisTests {
 		// Create a temporary data directory to use and inspect later
 		datadir := tmpdir(t)
+		//最后删除datadir
 		defer os.RemoveAll(datadir)
 
 		// Initialize the data directory with the custom genesis block
-		json := filepath.Join(datadir, "genesis.json")
-		if err := ioutil.WriteFile(json, []byte(tt.genesis), 0600); err != nil {
+		json := filepath.Join(datadir, "genesis.json")                           //string
+		if err := ioutil.WriteFile(json, []byte(tt.genesis), 0600); err != nil { //有err出现则
 			t.Fatalf("test %d: failed to write genesis file: %v", i, err)
 		}
-		runGeth(t, "--datadir", datadir, "init", json).WaitExit()
+		runGeth(t, "--datadir", datadir, "init", json).WaitExit() //run_test中
 
 		// Query the custom genesis block
 		geth := runGeth(t, "--networkid", "1337", "--syncmode=full", "--cache", "16",

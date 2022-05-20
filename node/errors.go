@@ -39,8 +39,8 @@ func convertFileLockError(err error) error {
 	return err
 }
 
-// StopError is returned if a Node fails to stop either any of its registered
-// services or itself.
+// StopError is returned if a Node fails to stop either any of its registered services or itself.
+//如果节点未能停止其任何已注册的服务或自身，则返回 StopError。
 type StopError struct {
 	Server   error
 	Services map[reflect.Type]error

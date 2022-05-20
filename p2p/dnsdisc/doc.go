@@ -15,4 +15,5 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package dnsdisc implements node discovery via DNS (EIP-1459).
+// 软件包 dnsdisc 通过 DNS （EIP-1459） 实现节点发现。
 package dnsdisc
