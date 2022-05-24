@@ -205,7 +205,7 @@ var (
 func init() {
 	// fmt.Println("********************this is cmd/geth/main.go/init()********************")
 	// Initialize the CLI app and start Geth
-	app.Action = geth
+	app.Action = geth //指明执行geth方法
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2021 The go-ethereum Authors"
 	app.Commands = []cli.Command{

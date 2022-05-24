@@ -33,21 +33,22 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
 )
 
+//一个flag string的地址，flag.String函数返回一个*string指针
 var adapterType = flag.String("adapter", "sim", `node adapter to use (one of "sim", "exec" or "docker")`)
 
 // main() starts a simulation network which contains nodes running a simple
 // ping-pong protocol
 func main() {
+	log.Info("starting flag parse")
 	flag.Parse()
-
 	// set the log level to Trace
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlTrace, log.StreamHandler(os.Stderr, log.TerminalFormat(false))))
 
 	// register a single ping-pong service
-	services := map[string]adapters.LifecycleConstructor{
-		"ping-pong": func(ctx *adapters.ServiceContext, stack *node.Node) (node.Lifecycle, error) {
-			pps := newPingPongService(ctx.Config.ID)
-			stack.RegisterProtocols(pps.Protocols())
+	services := map[string]adapters.LifecycleConstructor{ //services是映射 <string: adapters.LifecycleConstructor>
+		"ping-pong": func(ctx *adapters.ServiceContext, stack *node.Node) (node.Lifecycle, error) { //string: func 对
+			pps := newPingPongService(ctx.Config.ID) //注册了pingpongService，pps是一个*pingpongService指针
+			stack.RegisterProtocols(pps.Protocols()) //协议注册为ping-pong
 			return pps, nil
 		},
 	}
@@ -56,13 +57,13 @@ func main() {
 	// create the NodeAdapter
 	var adapter adapters.NodeAdapter
 
-	switch *adapterType {
+	switch *adapterType { //adapter:sim
 
 	case "sim":
 		log.Info("using sim adapter")
 		adapter = adapters.NewSimAdapter(services)
 
-	case "exec":
+	case "exec": //在硬盘中的simulate
 		tmpdir, err := ioutil.TempDir("", "p2p-example")
 		if err != nil {
 			log.Crit("error creating temp dir", "err", err)
@@ -80,9 +81,14 @@ func main() {
 	network := simulations.NewNetwork(adapter, &simulations.NetworkConfig{
 		DefaultService: "ping-pong",
 	})
-	if err := http.ListenAndServe(":8888", simulations.NewServer(network)); err != nil {
+
+	err := http.ListenAndServe(":8888", simulations.NewServer(network))
+	if err != nil {
 		log.Crit("error starting simulation server", "err", err)
 	}
+	// if err := http.ListenAndServe(":8888", simulations.NewServer(network)); err != nil { //create a server, 用network创建server对象作为http.Handler
+	// 	log.Crit("error starting simulation server", "err", err)
+	// }
 }
 
 // pingPongService runs a ping-pong protocol between nodes where each node
@@ -102,7 +108,7 @@ func newPingPongService(id enode.ID) *pingPongService {
 }
 
 func (p *pingPongService) Protocols() []p2p.Protocol {
-	return []p2p.Protocol{{
+	return []p2p.Protocol{{ //一个Protocol对象有如下的一些子参数
 		Name:     "ping-pong",
 		Version:  1,
 		Length:   2,
@@ -130,18 +136,19 @@ func (p *pingPongService) Info() interface{} {
 }
 
 const (
-	pingMsgCode = iota
+	pingMsgCode = iota //ping写出msgCode: 0
 	pongMsgCode
 )
 
 // Run implements the ping-pong protocol which sends ping messages to the peer
 // at 10s intervals, and responds to pings with pong messages.
 func (p *pingPongService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
+	log.Info("pingpongService Run")
 	log := p.log.New("peer.id", peer.ID())
 
-	errC := make(chan error)
-	go func() {
-		for range time.Tick(10 * time.Second) {
+	errC := make(chan error) //是一个error的channel，各处的error都进入到errC中
+	go func() {              //ping协程
+		for range time.Tick(1 * time.Second) {
 			log.Info("sending ping")
 			if err := p2p.Send(rw, pingMsgCode, "PING"); err != nil {
 				errC <- err
@@ -149,9 +156,10 @@ func (p *pingPongService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 			}
 		}
 	}()
-	go func() {
+	go func() { //pong协程，收到就发出
 		for {
 			msg, err := rw.ReadMsg()
+			// log.Info(msg.String())
 			if err != nil {
 				errC <- err
 				return
@@ -163,7 +171,7 @@ func (p *pingPongService) Run(peer *p2p.Peer, rw p2p.MsgReadWriter) error {
 			}
 			log.Info("received message", "msg.code", msg.Code, "msg.payload", string(payload))
 			atomic.AddInt64(&p.received, 1)
-			if msg.Code == pingMsgCode {
+			if msg.Code == pingMsgCode { //收到ping信息，返回一个pong
 				log.Info("sending pong")
 				go p2p.Send(rw, pongMsgCode, "PONG")
 			}

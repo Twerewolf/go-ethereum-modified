@@ -466,7 +466,7 @@ func startExecNodeStack() (*node.Node, error) {
 	if nodeTcpConn.IP == nil {
 		nodeTcpConn.IP = net.IPv4(127, 0, 0, 1)
 	}
-	conf.Node.initEnode(nodeTcpConn.IP, nodeTcpConn.Port, nodeTcpConn.Port)
+	conf.Node.initEnode(nodeTcpConn.IP, nodeTcpConn.Port, nodeTcpConn.Port) //此处执行初始化注册
 	conf.Stack.P2P.PrivateKey = conf.Node.PrivateKey
 	conf.Stack.Logger = log.New("node.id", conf.Node.ID.String())
 

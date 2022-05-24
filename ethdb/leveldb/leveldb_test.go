@@ -35,7 +35,7 @@ import (
 func TestLevelDB(t *testing.T) {
 	t.Run("DatabaseSuite", func(t *testing.T) {
 		dbtest.TestDatabaseSuite(t, func() ethdb.KeyValueStore {
-			db, err := leveldb.Open(storage.NewMemStorage(), nil) //此处test打开的是memStorage 不知道目的是？
+			db, err := leveldb.Open(storage.NewMemStorage(), nil) //此处test打开的是memStorage 不知道目的是？测试就都用内存
 			if err != nil {
 				t.Fatal(err)
 			}

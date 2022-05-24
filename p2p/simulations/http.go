@@ -45,7 +45,7 @@ var DefaultClient = NewClient("http://localhost:8888")
 // Client is a client for the simulation HTTP API which supports creating
 // and managing simulation networks
 type Client struct {
-	URL string
+	URL string //URL应该是server的url
 
 	client *http.Client
 }
@@ -175,7 +175,7 @@ func (c *Client) GetNodes() ([]*p2p.NodeInfo, error) {
 
 // CreateNode creates a node in the network using the given configuration
 func (c *Client) CreateNode(config *adapters.NodeConfig) (*p2p.NodeInfo, error) {
-	node := &p2p.NodeInfo{}
+	node := &p2p.NodeInfo{} //为什么能够读入, 此处只传入一个空NodeInfo，参数均为空
 	return node, c.Post("/nodes", config, node)
 }
 
@@ -245,7 +245,7 @@ func (c *Client) Send(method, path string, in, out interface{}) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	res, err := c.client.Do(req)
+	res, err := c.client.Do(req) //用标准库的http.client 执行Do(req)方法
 	if err != nil {
 		return err
 	}
@@ -288,7 +288,8 @@ func NewServer(network *Network) *Server {
 	s.GET("/events", s.StreamNetworkEvents)
 	s.GET("/snapshot", s.CreateSnapshot)
 	s.POST("/snapshot", s.LoadSnapshot)
-	s.POST("/nodes", s.CreateNode)
+	//POST 为对特定路径的 POST 请求注册一个处理程序
+	s.POST("/nodes", s.CreateNode) //创建节点？
 	s.GET("/nodes", s.GetNodes)
 	s.GET("/nodes/:nodeid", s.GetNode)
 	s.POST("/nodes/:nodeid/start", s.StartNode)
@@ -558,19 +559,19 @@ func (s *Server) LoadSnapshot(w http.ResponseWriter, req *http.Request) {
 func (s *Server) CreateNode(w http.ResponseWriter, req *http.Request) {
 	config := &adapters.NodeConfig{}
 
-	err := json.NewDecoder(req.Body).Decode(config)
+	err := json.NewDecoder(req.Body).Decode(config) //req通过json解析再Decode进入config中，后续用config来创建一个新节点
 	if err != nil && err != io.EOF {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	node, err := s.network.NewNodeWithConfig(config)
+	node, err := s.network.NewNodeWithConfig(config) //此处用config来创建一个新节点
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	s.JSON(w, http.StatusCreated, node.NodeInfo())
+	s.JSON(w, http.StatusCreated, node.NodeInfo()) //server以json格式返回data，此处data为nodeinfo
 }
 
 // GetNodes returns all nodes which exist in the network
@@ -677,6 +678,7 @@ func (s *Server) GET(path string, handle http.HandlerFunc) {
 }
 
 // POST registers a handler for POST requests to a particular path
+//POST 为对特定路径的 POST 请求注册一个处理程序
 func (s *Server) POST(path string, handle http.HandlerFunc) {
 	s.router.POST(path, s.wrapHandler(handle))
 }

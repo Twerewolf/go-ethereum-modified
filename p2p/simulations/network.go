@@ -50,15 +50,15 @@ type NetworkConfig struct {
 // The Network emits events when nodes are started and stopped, when they are
 // connected and disconnected, and also when messages are sent between nodes.
 type Network struct {
-	NetworkConfig
+	NetworkConfig //参数
 
-	Nodes   []*Node `json:"nodes"`
+	Nodes   []*Node `json:"nodes"` //连接nodes
 	nodeMap map[enode.ID]int
 
 	// Maps a node property string to node indexes of all nodes that hold this property
 	propertyMap map[string][]int
 
-	Conns   []*Conn `json:"conns"`
+	Conns   []*Conn `json:"conns"` //连接表
 	connMap map[string]int
 
 	nodeAdapter adapters.NodeAdapter

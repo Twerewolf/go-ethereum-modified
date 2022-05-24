@@ -77,7 +77,7 @@ type BatchElem struct {
 	Error error
 }
 
-// Client represents a connection to an RPC server.
+// Client represents a connection to an RPC server. client代表一个rpcserver的连接
 type Client struct {
 	idgen    func() ID // for subscriptions
 	scheme   string    // connection type: http, ws or ipc

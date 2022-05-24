@@ -3,7 +3,7 @@
 # Boot a ping-pong network simulation using the HTTP API started by ping-pong.go
 
 set -e
-
+# &>/dev/null指将输出流写入到黑洞丢弃
 main() {
   if ! which p2psim &>/dev/null; then
     fail "missing p2psim binary (you need to build cmd/p2psim and put it in \$PATH)"
@@ -18,6 +18,7 @@ main() {
   info "connecting node01 to all other nodes"
   for i in $(seq 2 10); do
     p2psim node connect "node01" "$(node_name $i)"
+    sleep 2
   done
 
   info "done"

@@ -15,7 +15,8 @@
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
 // p2psim provides a command-line client for a simulation HTTP API.
-//
+// 提供的是client，httpserver需要在/p2p/simulations/ping-pong.go处开启，
+// 需要先开启server再使用client才能正常执行
 // Here is an example of creating a 2 node network with the first node
 // connected to the second:
 //
@@ -54,7 +55,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-var client *simulations.Client
+var client *simulations.Client //每次执行都开启一个client，是simulations.Client结构对象
 
 func main() {
 	// 所有app都用cli模板：package cli ("gopkg.in/urfave/cli.v1")
@@ -69,7 +70,10 @@ func main() {
 		},
 	}
 	app.Before = func(ctx *cli.Context) error {
-		client = simulations.NewClient(ctx.GlobalString("api")) //run之前先创建出client实例
+		fmt.Println("app.Before阶段，使用simulations创建新Client")
+		//GlobalString找到对应flag再转换成string，找到的就是前面app.Flags中Name为api对应的Value
+		client = simulations.NewClient(ctx.GlobalString("api")) //run之前先创建出client实例, ctx.GlobalString("api")生成localhost:8888
+		fmt.Println("client.URL:", client.URL)                  //此时已设置好client.URL是localhost:8888，指的应该是服务端server的url统一都是localhost:8888
 		return nil
 	}
 	app.Commands = []cli.Command{
@@ -192,7 +196,10 @@ func showNetwork(ctx *cli.Context) error {
 	if len(ctx.Args()) != 0 { //通用help show
 		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 	}
-	network, err := client.GetNetwork() //从client执行getnetwork函数
+	fmt.Println("执行client.GetNetwork()")
+	network, err := client.GetNetwork() //从client执行getnetwork函数，报错了
+	//err内容：Get "http://localhost:8888/": dial tcp 127.0.0.1:8888: connect: connection refused
+
 	if err != nil {
 		return err
 	}
@@ -281,8 +288,8 @@ func createNode(ctx *cli.Context) error {
 		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 	}
 	config := adapters.RandomNodeConfig()
-	config.Name = ctx.String("name")
-	if key := ctx.String("key"); key != "" {
+	config.Name = ctx.String("name")         //从ctx里面的name对应过来
+	if key := ctx.String("key"); key != "" { //若设置了key
 		privKey, err := crypto.HexToECDSA(key)
 		if err != nil {
 			return err
@@ -293,7 +300,7 @@ func createNode(ctx *cli.Context) error {
 	if services := ctx.String("services"); services != "" {
 		config.Lifecycles = strings.Split(services, ",")
 	}
-	node, err := client.CreateNode(config)
+	node, err := client.CreateNode(config) //用config创建一个node，方法是client.Createnode
 	if err != nil {
 		return err
 	}
