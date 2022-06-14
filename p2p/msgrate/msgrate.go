@@ -15,6 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package msgrate allows estimating the throughput of peers for more balanced syncs.
+//包 msgrate 允许估计对等方的吞吐量，以实现更平衡的同步。
 package msgrate
 
 import (

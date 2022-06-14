@@ -70,11 +70,11 @@ func (api *privateAdminAPI) AddPeer(url string) (bool, error) {
 		return false, ErrNodeStopped
 	}
 	// Try to add the url as a static peer and return
-	node, err := enode.Parse(enode.ValidSchemes, url)
+	node, err := enode.Parse(enode.ValidSchemes, url) //在enode处解析url对应的node，将node增加到peer中
 	if err != nil {
 		return false, fmt.Errorf("invalid enode: %v", err)
 	}
-	server.AddPeer(node)
+	server.AddPeer(node) //增加到server的静态peer列表中
 	return true, nil
 }
 

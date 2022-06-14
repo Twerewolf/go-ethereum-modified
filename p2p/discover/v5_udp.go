@@ -51,7 +51,7 @@ const (
 // The UDPv5 transport is split into two objects: the codec object deals with
 // encoding/decoding and with the handshake; the UDPv5 object handles higher-level concerns.
 type codecV5 interface {
-	// Encode encodes a packet.
+	// Encode encodes a packet. 是对数据包进行编码的函数，
 	Encode(enode.ID, string, v5wire.Packet, *v5wire.Whoareyou) ([]byte, v5wire.Nonce, error)
 
 	// decode decodes a packet. It returns a *v5wire.Unknown packet if decryption fails.
@@ -76,7 +76,7 @@ type UDPv5 struct {
 	trlock     sync.Mutex
 	trhandlers map[string]TalkRequestHandler
 
-	// channels into dispatch
+	// channels into dispatch 调度
 	packetInCh    chan ReadPacket
 	readNextCh    chan struct{}
 	callCh        chan *callV5

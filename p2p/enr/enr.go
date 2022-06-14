@@ -30,7 +30,26 @@
 // When creating a record, set the entries you want and use a signing function provided by
 // the identity scheme to add the signature. Modifying a record invalidates the signature.
 //
-// Package enr supports the "secp256k1-keccak" identity scheme.
+// Package enr supports the "secp256k1-keccak" identity scheme. 支持id方案
+//Ethereum Node Records
+//包 enr 实现了 EIP-778 中定义的以太坊节点记录。节点记录保存
+//关于对等网络上的节点的任意信息。节点信息为
+//存储在键/值对中。要在记录中存储和检索键/值，请使用条目
+//界面。
+//
+//签名处理
+//
+//在将记录传输到另一个节点之前，必须对其进行签名。
+//
+//解码记录不会检查其签名。处理来自
+//不受信任的来源必须始终验证两件事：记录使用身份方案
+//被认为是安全的，并且签名根据声明的方案是有效的。
+//
+//创建记录时，设置您想要的条目并使用由提供的签名功能
+//添加签名的身份方案。修改记录会使签名无效。
+//
+//包 enr 支持“secp256k1-keccak”身份方案。
+
 package enr
 
 import (
@@ -83,6 +102,7 @@ func (m SchemeMap) NodeAddr(r *Record) []byte {
 }
 
 // Record represents a node record. The zero value is an empty record.
+// 代表一个节点的记录
 type Record struct {
 	seq       uint64 // sequence number
 	signature []byte // the signature

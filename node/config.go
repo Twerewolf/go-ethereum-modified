@@ -322,7 +322,7 @@ func (c *Config) ResolvePath(path string) string {
 	// Backwards-compatibility: ensure that data directory files created
 	// by geth 1.4 are used if they exist.
 	if warn, isOld := isOldGethResource[path]; isOld {
-		oldpath := ""
+		oldpath := "" //新建空string
 		if c.name() == "geth" {
 			oldpath = filepath.Join(c.DataDir, path)
 		}
@@ -410,6 +410,7 @@ func (c *Config) parsePersistentNodes(w *bool, path string) []*enode.Node {
 		return nil
 	}
 	// Interpret the list as a discovery node array
+	// 将列表解释为发现节点数组
 	var nodes []*enode.Node
 	for _, url := range nodelist {
 		if url == "" {
@@ -432,7 +433,7 @@ func (c *Config) KeyDirConfig() (string, error) {
 		err    error
 	)
 	switch {
-	case filepath.IsAbs(c.KeyStoreDir):
+	case filepath.IsAbs(c.KeyStoreDir): //IsAbs reports whether the path is absolute.报告路径是否为绝对路径。
 		keydir = c.KeyStoreDir
 	case c.DataDir != "":
 		if c.KeyStoreDir == "" {
@@ -467,14 +468,14 @@ func getKeyStoreDir(conf *Config) (string, bool, error) {
 		return "", false, err
 	}
 
-	return keydir, isEphemeral, nil
+	return keydir, isEphemeral, nil //输出keydir，且其是否是暂时的(ephemeral)
 }
 
 var warnLock sync.Mutex
 
 func (c *Config) warnOnce(w *bool, format string, args ...interface{}) {
 	warnLock.Lock()
-	defer warnLock.Unlock()
+	defer warnLock.Unlock() //延迟执行unlock，在func最后执行，一般用于释放某些已经分配的资源，类似其他语言的finally
 
 	if *w {
 		return
@@ -483,6 +484,6 @@ func (c *Config) warnOnce(w *bool, format string, args ...interface{}) {
 	if l == nil {
 		l = log.Root()
 	}
-	l.Warn(fmt.Sprintf(format, args...))
+	l.Warn(fmt.Sprintf(format, args...)) //log输出warn语句，格式是format
 	*w = true
 }

@@ -42,7 +42,7 @@ func init() {
 
 ## Node Adapters
 
-The simulation framework includes multiple "node adapters" which are
+The simulation framework includes multiple "node adapters"节点适配器 which are
 responsible for creating an environment in which a node runs.
 
 ### SimAdapter

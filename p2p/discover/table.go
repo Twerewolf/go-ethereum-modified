@@ -64,10 +64,14 @@ const (
 // Table is the 'node table', a Kademlia-like index of neighbor nodes. The table keeps
 // itself up-to-date by verifying the liveness of neighbors and requesting their node
 // records when announcements of a new record version are received.
+//表是“节点表”，是类似 Kademlia 的邻居节点索引。桌子保持
+//通过验证邻居的活动并请求其节点来更新本身
+//收到新记录版本的公告时的记录。
+// TJW: Table是用于节点发现的结构，采用类似 Kademlia，有K桶
 type Table struct {
 	mutex   sync.Mutex        // protects buckets, bucket content, nursery, rand
-	buckets [nBuckets]*bucket // index of known nodes by distance
-	nursery []*node           // bootstrap nodes
+	buckets [nBuckets]*bucket // index of known nodes by distance按距离划分的已知节点索引
+	nursery []*node           // bootstrap nodes引导节点
 	rand    *mrand.Rand       // source of randomness, periodically reseeded
 	ips     netutil.DistinctNetSet
 
@@ -83,6 +87,7 @@ type Table struct {
 }
 
 // transport is implemented by the UDP transports.
+// 传输有UDP实现
 type transport interface {
 	Self() *enode.Node
 	RequestENR(*enode.Node) (*enode.Node, error)

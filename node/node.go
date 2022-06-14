@@ -37,10 +37,14 @@ import (
 )
 
 // Node is a container on which services can be registered.
+
+// A TypeMux dispatches events to registered receivers. Receivers can be registered to handle events of certain type. Any operation called after mux is stopped will return ErrMuxClosed.
+// The zero value is ready to use.
+// Deprecated: use Feed
 type Node struct {
-	eventmux      *event.TypeMux
-	config        *Config
-	accman        *accounts.Manager
+	eventmux      *event.TypeMux    //锁？
+	config        *Config           //设置
+	accman        *accounts.Manager //账户管理
 	log           log.Logger
 	keyDir        string            // key store directory
 	keyDirTemp    bool              // If true, key directory will be removed by Stop
@@ -545,8 +549,9 @@ func (n *Node) WSEndpoint() string {
 	return "ws://" + n.ws.listenAddr() + n.ws.wsConfig.prefix
 }
 
-// EventMux retrieves the event multiplexer used by all the network services in
+// EventMux retrieves the event multiplexer事件复用器 used by all the network services in
 // the current protocol stack.
+// EventMux在node's functions中没有再被使用
 func (n *Node) EventMux() *event.TypeMux {
 	return n.eventmux
 }
