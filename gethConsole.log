@@ -1,4 +1,0 @@
-INFO [03-10|17:16:07.159] start from geth/main function 
-INFO [03-10|17:16:07.160] Starting Geth on Ethereum mainnet... 
-INFO [03-10|17:16:07.160] Bumping default cache on mainnet         provided=1024 updated=4096
-Fatal: open ./geth_config: no such file or directory

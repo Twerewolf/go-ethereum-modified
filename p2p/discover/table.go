@@ -215,14 +215,15 @@ func (tab *Table) refresh() <-chan struct{} {
 }
 
 // loop schedules runs of doRefresh, doRevalidate and copyLiveNodes.
+// 测试udp的对等peer是否正常
 func (tab *Table) loop() {
 	var (
-		revalidate     = time.NewTimer(tab.nextRevalidateTime())
-		refresh        = time.NewTicker(refreshInterval)
-		copyNodes      = time.NewTicker(copyNodesInterval)
-		refreshDone    = make(chan struct{})           // where doRefresh reports completion
-		revalidateDone chan struct{}                   // where doRevalidate reports completion
-		waiting        = []chan struct{}{tab.initDone} // holds waiting callers while doRefresh runs
+		revalidate     = time.NewTimer(tab.nextRevalidateTime()) //此时间随机生成2.742165505s?
+		refresh        = time.NewTicker(refreshInterval)         //30min
+		copyNodes      = time.NewTicker(copyNodesInterval)       //30s
+		refreshDone    = make(chan struct{})                     // where doRefresh reports completion
+		revalidateDone chan struct{}                             // where doRevalidate reports completion
+		waiting        = []chan struct{}{tab.initDone}           // holds waiting callers while doRefresh runs
 	)
 	defer refresh.Stop()
 	defer revalidate.Stop()
@@ -231,10 +232,10 @@ func (tab *Table) loop() {
 	// Start initial refresh.
 	go tab.doRefresh(refreshDone)
 
-loop:
+loop: //for循环外的跳转标签，循环中最后有break loop
 	for {
 		select {
-		case <-refresh.C:
+		case <-refresh.C: //30min 刷新
 			tab.seedRand()
 			if refreshDone == nil {
 				refreshDone = make(chan struct{})
@@ -257,7 +258,7 @@ loop:
 		case <-revalidateDone:
 			revalidate.Reset(tab.nextRevalidateTime())
 			revalidateDone = nil
-		case <-copyNodes.C:
+		case <-copyNodes.C: //30s copy
 			go tab.copyLiveNodes()
 		case <-tab.closeReq:
 			break loop
@@ -287,7 +288,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	tab.loadSeedNodes()
 
 	// Run self lookup to discover new neighbor nodes.
-	tab.net.lookupSelf()
+	tab.net.lookupSelf() //查找近邻的节点
 
 	// The Kademlia paper specifies that the bucket refresh should
 	// perform a lookup in the least recently used bucket. We cannot
@@ -295,14 +296,14 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// (not hash-sized) and it is not easily possible to generate a
 	// sha3 preimage that falls into a chosen bucket.
 	// We perform a few lookups with a random target instead.
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 3; i++ { //随机查找3个节点
 		tab.net.lookupRandom()
 	}
 }
 
 func (tab *Table) loadSeedNodes() {
-	seeds := wrapNodes(tab.db.QuerySeeds(seedCount, seedMaxAge))
-	seeds = append(seeds, tab.nursery...)
+	seeds := wrapNodes(tab.db.QuerySeeds(seedCount, seedMaxAge)) //在table.db中找seeds，30个，120h
+	seeds = append(seeds, tab.nursery...)                        //增加bootnodes到seeds中
 	for i := range seeds {
 		seed := seeds[i]
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
@@ -369,7 +370,7 @@ func (tab *Table) nodeToRevalidate() (n *node, bi int) {
 	return nil, 0
 }
 
-func (tab *Table) nextRevalidateTime() time.Duration {
+func (tab *Table) nextRevalidateTime() time.Duration { //2.742165505s
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()
 

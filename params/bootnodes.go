@@ -31,6 +31,9 @@ var MainnetBootnodes = []string{
 	"enode://715171f50508aba88aecd1250af392a45a330af91d7b90701c436b618c86aaa1589c9184561907bebbb56439b8f8787bc01f49a7c77276c58c1b09822d75e8e8@52.231.165.108:30303",  // bootnode-azure-koreasouth-001
 	"enode://5d6d7cd20d6da4bb83a1d28cadb5d409b64edf314c0335df658c1a54e32c7c4a7ab7823d57c39b6a757556e68ff1df17c748b698544a55cb488b52479a92b60f@104.42.217.25:30303",   // bootnode-azure-westus-001
 }
+var SeanetBootnodes = []string{
+	"enode://ae795f7ed38aef3a29763216ec3673bcffa38938a77bc9811a2d56977bc495d8d93d6b4536d21b01b5f67662cea07dd89feabb0354abc42ecc33bd918a4573c2@127.0.0.1:30303",
+}
 
 // RopstenBootnodes are the enode URLs of the P2P bootstrap nodes running on the
 // Ropsten test network.

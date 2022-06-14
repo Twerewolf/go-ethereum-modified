@@ -71,7 +71,7 @@ type UDPv4 struct {
 	priv        *ecdsa.PrivateKey
 	localNode   *enode.LocalNode
 	db          *enode.DB
-	tab         *Table
+	tab         *Table //kademlia发现协议的table
 	closeOnce   sync.Once
 	wg          sync.WaitGroup
 
@@ -103,6 +103,7 @@ type replyMatcher struct {
 	// reply was acceptable. The second return value indicates whether the callback should
 	// be removed from the pending reply queue. If it returns false, the reply is considered
 	// incomplete and the callback will be invoked again for the next matching reply.
+	// 在matching reply到达时才被调用的函数，若返回matched即是匹配的，则这个reply是可以接收的，
 	callback replyMatchFunc
 
 	// errc receives nil when the callback indicates completion or an
@@ -141,17 +142,17 @@ func ListenV4(c UDPConn, ln *enode.LocalNode, cfg Config) (*UDPv4, error) {
 		cancelCloseCtx:  cancel,
 		log:             cfg.Log,
 	}
-
+	log.Info("transport begins")
 	tab, err := newTable(t, ln.Database(), cfg.Bootnodes, t.log)
 	if err != nil {
 		return nil, err
 	}
 	t.tab = tab
-	go tab.loop()
+	go tab.loop() //协程1 table loop，udpv4.table 开启，持续loop
 
 	t.wg.Add(2)
-	go t.loop()
-	go t.readLoop(cfg.Unhandled)
+	go t.loop()                  //协程2 udp loop
+	go t.readLoop(cfg.Unhandled) //协程3 udp readloop
 	return t, nil
 }
 
@@ -208,15 +209,17 @@ func (t *UDPv4) ourEndpoint() v4wire.Endpoint {
 
 // Ping sends a ping message to the given node.
 func (t *UDPv4) Ping(n *enode.Node) error {
-	_, err := t.ping(n)
+	_, err := t.ping(n) //seq被舍弃
 	return err
 }
 
 // ping sends a ping message to the given node and waits for a reply.
 func (t *UDPv4) ping(n *enode.Node) (seq uint64, err error) {
-	rm := t.sendPing(n.ID(), &net.UDPAddr{IP: n.IP(), Port: n.UDP()}, nil)
-	if err = <-rm.errc; err == nil {
+	t.log.Info("ping node:", n.String())
+	rm := t.sendPing(n.ID(), &net.UDPAddr{IP: n.IP(), Port: n.UDP()}, nil) //replymatcher
+	if err = <-rm.errc; err == nil {                                       //从replymatcher的error channel读出err
 		seq = rm.reply.(*v4wire.Pong).ENRSeq
+		t.log.Info("ping reply pong:", seq)
 	}
 	return seq, err
 }
@@ -233,8 +236,8 @@ func (t *UDPv4) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) *r
 	}
 	// Add a matcher for the reply to the pending reply queue. Pongs are matched if they
 	// reference the ping we're about to send.
-	rm := t.pending(toid, toaddr.IP, v4wire.PongPacket, func(p v4wire.Packet) (matched bool, requestDone bool) {
-		matched = bytes.Equal(p.(*v4wire.Pong).ReplyTok, hash)
+	rm := t.pending(toid, toaddr.IP, v4wire.PongPacket, func(p v4wire.Packet) (matched bool, requestDone bool) { //此处func是回调时的函数，在此处具体写出，而没有在
+		matched = bytes.Equal(p.(*v4wire.Pong).ReplyTok, hash) //对比：收到pong packet的ping hash记录 和 发起的ping的hash
 		if matched && callback != nil {
 			callback()
 		}
@@ -247,6 +250,7 @@ func (t *UDPv4) sendPing(toid enode.ID, toaddr *net.UDPAddr, callback func()) *r
 }
 
 func (t *UDPv4) makePing(toaddr *net.UDPAddr) *v4wire.Ping {
+	log.Info("makePing() 制作一个ping struct", toaddr.String())
 	return &v4wire.Ping{
 		Version:    4,
 		From:       t.ourEndpoint(),
@@ -258,6 +262,7 @@ func (t *UDPv4) makePing(toaddr *net.UDPAddr) *v4wire.Ping {
 
 // LookupPubkey finds the closest nodes to the given public key.
 func (t *UDPv4) LookupPubkey(key *ecdsa.PublicKey) []*enode.Node {
+	t.log.Info("UDPv4 LookupPubkey() ", key)
 	if t.tab.len() == 0 {
 		// All nodes were dropped, refresh. The very first query will hit this
 		// case and run the bootstrapping logic.
@@ -273,12 +278,14 @@ func (t *UDPv4) RandomNodes() enode.Iterator {
 
 // lookupRandom implements transport.
 func (t *UDPv4) lookupRandom() []*enode.Node {
+	t.log.Info("UDPv4 lookupRandom() ")
 	return t.newRandomLookup(t.closeCtx).run()
 }
 
 // lookupSelf implements transport.
 func (t *UDPv4) lookupSelf() []*enode.Node {
-	return t.newLookup(t.closeCtx, encodePubkey(&t.priv.PublicKey)).run()
+	t.log.Info("UDPv4 lookupSelf() ,ID/IP/UDPport", t.Self().ID(), t.Self().IP(), t.Self().UDP())
+	return t.newLookup(t.closeCtx, encodePubkey(&t.priv.PublicKey)).run() //newLookup创建了新的*lookup对象，
 }
 
 func (t *UDPv4) newRandomLookup(ctx context.Context) *lookup {
@@ -288,26 +295,30 @@ func (t *UDPv4) newRandomLookup(ctx context.Context) *lookup {
 }
 
 func (t *UDPv4) newLookup(ctx context.Context, targetKey encPubkey) *lookup {
+	t.log.Info("newLookup")
 	target := enode.ID(crypto.Keccak256Hash(targetKey[:]))
 	ekey := v4wire.Pubkey(targetKey)
-	it := newLookup(ctx, t.tab, target, func(n *node) ([]*node, error) {
-		return t.findnode(n.ID(), n.addr(), ekey)
+	it := newLookup(ctx, t.tab, target, func(n *node) ([]*node, error) { //创建一个新的*lookup对象，包含查询函数为findnode
+		return t.findnode(n.ID(), n.addr(), ekey) // 发送消息给指定node，提供key
 	})
 	return it
 }
 
 // findnode sends a findnode request to the given node and waits until
 // the node has sent up to k neighbors.
+// findnode发送req到指定的node并等待返回的k个邻居
 func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target v4wire.Pubkey) ([]*node, error) {
-	t.ensureBond(toid, toaddr)
+	log.Info("findnode():", toid, toaddr.String())
+	t.ensureBond(toid, toaddr) //发送ping确认是否连接
 
 	// Add a matcher for 'neighbours' replies to the pending reply queue. The matcher is
 	// active until enough nodes have been received.
 	nodes := make([]*node, 0, bucketSize)
 	nreceived := 0
+	//增加了replymatcher用于neighbors
 	rm := t.pending(toid, toaddr.IP, v4wire.NeighborsPacket, func(r v4wire.Packet) (matched bool, requestDone bool) {
-		reply := r.(*v4wire.Neighbors)
-		for _, rn := range reply.Nodes {
+		reply := r.(*v4wire.Neighbors)   //？？？？？？？怎么就能够得到Neighbors呢
+		for _, rn := range reply.Nodes { //neighbors的每一个nodes
 			nreceived++
 			n, err := t.nodeFromRPC(toaddr, rn)
 			if err != nil {
@@ -322,13 +333,14 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target v4wire.Pubke
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
+	log.Info("findnode->send(Findnode) toaddr/toID/FindnodePacket.Target", toaddr.String(), toid.String(), target)
 	// Ensure that callers don't see a timeout if the node actually responded. Since
 	// findnode can receive more than one neighbors response, the reply matcher will be
 	// active until the remote node sends enough nodes. If the remote end doesn't have
 	// enough nodes the reply matcher will time out waiting for the second reply, but
 	// there's no need for an error in that case.
 	err := <-rm.errc
-	if err == errTimeout && rm.reply != nil {
+	if err == errTimeout && rm.reply != nil { //超时err就返回nil，代表没有其他错误
 		err = nil
 	}
 	return nodes, err
@@ -337,7 +349,7 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target v4wire.Pubke
 // RequestENR sends enrRequest to the given node and waits for a response.
 func (t *UDPv4) RequestENR(n *enode.Node) (*enode.Node, error) {
 	addr := &net.UDPAddr{IP: n.IP(), Port: n.UDP()}
-	t.ensureBond(n.ID(), addr)
+	t.ensureBond(n.ID(), addr) //发送ping确认是否连接
 
 	req := &v4wire.ENRRequest{
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
@@ -350,7 +362,7 @@ func (t *UDPv4) RequestENR(n *enode.Node) (*enode.Node, error) {
 	// Add a matcher for the reply to the pending reply queue. Responses are matched if
 	// they reference the request we're about to send.
 	rm := t.pending(n.ID(), addr.IP, v4wire.ENRResponsePacket, func(r v4wire.Packet) (matched bool, requestDone bool) {
-		matched = bytes.Equal(r.(*v4wire.ENRResponse).ReplyTok, hash)
+		matched = bytes.Equal(r.(*v4wire.ENRResponse).ReplyTok, hash) //对比收到packet的hash of the enrRequest packet和发送前得到hash是否相等，相等就match
 		return matched, matched
 	})
 	// Send the packet and wait for the reply.
@@ -377,6 +389,7 @@ func (t *UDPv4) RequestENR(n *enode.Node) (*enode.Node, error) {
 
 // pending adds a reply matcher to the pending reply queue.
 // see the documentation of type replyMatcher for a detailed explanation.
+// 增加一个对等待响应的队列的匹配器
 func (t *UDPv4) pending(id enode.ID, ip net.IP, ptype byte, callback replyMatchFunc) *replyMatcher {
 	ch := make(chan error, 1)
 	p := &replyMatcher{from: id, ip: ip, ptype: ptype, callback: callback, errc: ch}
@@ -505,7 +518,7 @@ func (t *UDPv4) send(toaddr *net.UDPAddr, toid enode.ID, req v4wire.Packet) ([]b
 }
 
 func (t *UDPv4) write(toaddr *net.UDPAddr, toid enode.ID, what string, packet []byte) error {
-	_, err := t.conn.WriteToUDP(packet, toaddr)
+	_, err := t.conn.WriteToUDP(packet, toaddr) //只能找到接口，没有方法实现？
 	t.log.Trace(">> "+what, "id", toid, "addr", toaddr, "err", err)
 	return err
 }
@@ -575,8 +588,9 @@ func (t *UDPv4) ensureBond(toid enode.ID, toaddr *net.UDPAddr) {
 	}
 }
 
+//????
 func (t *UDPv4) nodeFromRPC(sender *net.UDPAddr, rn v4wire.Node) (*node, error) {
-	if rn.UDP <= 1024 {
+	if rn.UDP <= 1024 { //udp端口太小，报错errLowPort
 		return nil, errLowPort
 	}
 	if err := netutil.CheckRelayIP(sender.IP, rn.IP); err != nil {
@@ -603,7 +617,7 @@ func nodeToRPC(n *node) v4wire.Node {
 	return v4wire.Node{ID: ekey, IP: n.IP(), UDP: uint16(n.UDP()), TCP: uint16(n.TCP())}
 }
 
-// wrapPacket returns the handler functions applicable to a packet.
+// wrapPacket returns the handler functions applicable to a packet.返回适用的处理函数
 func (t *UDPv4) wrapPacket(p v4wire.Packet) *packetHandlerV4 {
 	var h packetHandlerV4
 	h.Packet = p
@@ -750,7 +764,7 @@ func (t *UDPv4) verifyNeighbors(h *packetHandlerV4, from *net.UDPAddr, fromID en
 	if v4wire.Expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.handleReply(fromID, from.IP, h.Packet) {
+	if !t.handleReply(fromID, from.IP, h.Packet) { //把收到的packet写入到gotReply
 		return errUnsolicitedReply
 	}
 	return nil

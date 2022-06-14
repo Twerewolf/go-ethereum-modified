@@ -170,7 +170,7 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "install":
-		doInstall(os.Args[2:])
+		doInstall(os.Args[2:]) //读入后续参数
 	case "test":
 		doTest(os.Args[2:])
 	case "lint":
@@ -231,7 +231,7 @@ func doInstall(cmdline []string) {
 	// Now we choose what we're even building.
 	// Default: collect all 'main' packages in cmd/ and build those.
 	packages := flag.Args()
-	if len(packages) == 0 {
+	if len(packages) == 0 { //默认不指定则编译全部/cmd下的main包
 		packages = build.FindMainPackages("./cmd")
 	}
 

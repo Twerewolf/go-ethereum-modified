@@ -143,6 +143,11 @@ var (
 		Name:  "mainnet",
 		Usage: "Ethereum mainnet",
 	}
+	//seanet flag 增加,但是没有使用
+	SeanetFlag = cli.BoolFlag{
+		Name:  "seanet",
+		Usage: "Seanet chain test network",
+	}
 	GoerliFlag = cli.BoolFlag{
 		Name:  "goerli",
 		Usage: "Görli network: pre-configured proof-of-authority test network",
@@ -847,10 +852,14 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 // setBootstrapNodes creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.MainnetBootnodes
+	urls := params.MainnetBootnodes //默认设置
 	switch {
-	case ctx.GlobalIsSet(BootnodesFlag.Name):
-		urls = SplitAndTrim(ctx.GlobalString(BootnodesFlag.Name))
+	case ctx.GlobalIsSet(BootnodesFlag.Name): //手动添加的flag
+		log.Info("cli设置--bootnode添加")
+		urls = SplitAndTrim(ctx.GlobalString(BootnodesFlag.Name)) //解析得到手动添加的urls
+	//增加seanet设置
+	case ctx.GlobalBool(SeanetFlag.Name):
+		urls = params.SeanetBootnodes
 	case ctx.GlobalBool(RopstenFlag.Name):
 		urls = params.RopstenBootnodes
 	case ctx.GlobalBool(SepoliaFlag.Name):

@@ -186,12 +186,32 @@ func (n *Node) URLv4() string {
 	} else {
 		addr := net.TCPAddr{IP: n.IP(), Port: n.TCP()}
 		u.User = url.User(nodeid)
+		// fmt.Println("-------------------------------------------------------------------", nodeid)
 		u.Host = addr.String()
 		if n.UDP() != n.TCP() {
 			u.RawQuery = "discport=" + strconv.Itoa(n.UDP())
 		}
 	}
 	return u.String()
+}
+
+//tjw: 增加获取enode nodeid
+func (n *Node) NodeID() string {
+	var (
+		scheme enr.ID
+		nodeid string
+		key    ecdsa.PublicKey
+	)
+	n.Load(&scheme)
+	n.Load((*Secp256k1)(&key))
+	switch {
+	case scheme == "v4" || key != ecdsa.PublicKey{}:
+		nodeid = fmt.Sprintf("%x", crypto.FromECDSAPub(&key)[1:])
+	default:
+		nodeid = fmt.Sprintf("%s.%x", scheme, n.id[:])
+	}
+
+	return nodeid
 }
 
 // PubkeyToIDV4 derives the v4 node address from the given public key.

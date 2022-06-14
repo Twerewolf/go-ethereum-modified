@@ -68,13 +68,13 @@ func (it *lookup) run() []*enode.Node {
 func (it *lookup) advance() bool {
 	for it.startQueries() {
 		select {
-		case nodes := <-it.replyCh:
+		case nodes := <-it.replyCh: //replyCh收到回复的nodes
 			it.replyBuffer = it.replyBuffer[:0]
 			for _, n := range nodes {
-				if n != nil && !it.seen[n.ID()] {
+				if n != nil && !it.seen[n.ID()] { //不是已经找过的nodeID
 					it.seen[n.ID()] = true
-					it.result.push(n, bucketSize)
-					it.replyBuffer = append(it.replyBuffer, n)
+					it.result.push(n, bucketSize)              //压入这个得到的回复的node
+					it.replyBuffer = append(it.replyBuffer, n) //在replyBuffer中也同样压入这个node
 				}
 			}
 			it.queries--

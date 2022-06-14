@@ -30,7 +30,7 @@ import (
 // UDPConn is a network connection on which discovery can operate.
 type UDPConn interface {
 	ReadFromUDP(b []byte) (n int, addr *net.UDPAddr, err error)
-	WriteToUDP(b []byte, addr *net.UDPAddr) (n int, err error)
+	WriteToUDP(b []byte, addr *net.UDPAddr) (n int, err error) //指向哪里？？
 	Close() error
 	LocalAddr() net.Addr
 }

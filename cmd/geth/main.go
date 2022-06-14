@@ -27,7 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/cmd/utils" //包含有解析flags的方法
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/console/prompt"
 	"github.com/ethereum/go-ethereum/eth"
@@ -138,6 +138,8 @@ var (
 		utils.NodeKeyHexFlag,
 		utils.DNSDiscoveryFlag,
 		utils.MainnetFlag,
+		//增加seanet
+		utils.SeanetFlag,
 		utils.DeveloperFlag,
 		utils.DeveloperPeriodFlag,
 		utils.RopstenFlag,
@@ -205,7 +207,7 @@ var (
 func init() {
 	// fmt.Println("********************this is cmd/geth/main.go/init()********************")
 	// Initialize the CLI app and start Geth
-	app.Action = geth //指明执行geth方法
+	app.Action = geth      //指明执行geth方法
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2021 The go-ethereum Authors"
 	app.Commands = []cli.Command{

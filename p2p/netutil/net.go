@@ -24,11 +24,14 @@ import (
 	"net"
 	"sort"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var lan4, lan6, special4, special6 Netlist
 
 func init() {
+	log.Info("TJW: net init ,Add some IPs")
 	// Lists from RFC 5735, RFC 5156,
 	// https://www.iana.org/assignments/iana-ipv4-special-registry/
 	lan4.Add("0.0.0.0/8")              // "This" network

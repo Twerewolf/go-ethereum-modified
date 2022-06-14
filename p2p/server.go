@@ -174,15 +174,20 @@ type Server struct {
 
 	listener     net.Listener
 	ourHandshake *protoHandshake
-	loopWG       sync.WaitGroup // loop, listenLoop
-	peerFeed     event.Feed
-	log          log.Logger
+	// A WaitGroup waits for a collection of goroutines to finish.
+	// The main goroutine calls Add to set the number of goroutines to wait for.
+	// Then each of the goroutines runs and calls Done when finished.
+	// At the same time, Wait can be used to block until all goroutines have finished.
+	// A WaitGroup must not be copied after first use.
+	loopWG   sync.WaitGroup // loop, listenLoop
+	peerFeed event.Feed
+	log      log.Logger
 
 	nodedb    *enode.DB
 	localnode *enode.LocalNode
 	ntab      *discover.UDPv4
 	DiscV5    *discover.UDPv5
-	discmix   *enode.FairMix
+	discmix   *enode.FairMix //均匀获取各节点的信息
 	dialsched *dialScheduler
 
 	// Channels into the run loop.
@@ -199,7 +204,7 @@ type Server struct {
 	inboundHistory expHeap
 }
 
-type peerOpFunc func(map[enode.ID]*Peer)
+type peerOpFunc func(map[enode.ID]*Peer) //对一些peer的操作？
 
 type peerDrop struct {
 	*Peer
@@ -433,18 +438,20 @@ func (s *sharedUDPConn) Close() error {
 
 // Start starts running the server.
 // Servers can not be re-used after stopping.
+// p2p server start开启节点发现
 func (srv *Server) Start() (err error) {
+	// initialize the server
 	srv.lock.Lock()
-	defer srv.lock.Unlock()
-	if srv.running {
+	defer srv.lock.Unlock() //server拥有互斥锁子元素
+	if srv.running {        //查看是否已经running
 		return errors.New("server already running")
 	}
 	srv.running = true
-	srv.log = srv.Config.Logger
+	srv.log = srv.Config.Logger //打开logger
 	if srv.log == nil {
 		srv.log = log.Root()
 	}
-	if srv.clock == nil {
+	if srv.clock == nil { //时钟为系统时钟
 		srv.clock = mclock.System{}
 	}
 	if srv.NoDial && srv.ListenAddr == "" {
@@ -452,7 +459,7 @@ func (srv *Server) Start() (err error) {
 	}
 
 	// static fields
-	if srv.PrivateKey == nil {
+	if srv.PrivateKey == nil { //确定privateKey
 		return errors.New("Server.PrivateKey must be set to a non-nil key")
 	}
 	if srv.newTransport == nil {
@@ -461,6 +468,7 @@ func (srv *Server) Start() (err error) {
 	if srv.listenFunc == nil {
 		srv.listenFunc = net.Listen
 	}
+	// 创建一系列channel备用传输，channel传输共享数据的内存地址
 	srv.quit = make(chan struct{})
 	srv.delpeer = make(chan peerDrop)
 	srv.checkpointPostHandshake = make(chan *conn)
@@ -469,8 +477,9 @@ func (srv *Server) Start() (err error) {
 	srv.removetrusted = make(chan *enode.Node)
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
-
-	if err := srv.setupLocalNode(); err != nil {
+	// setup localnode pubkey, create devp2p handshake(using protoHandshake with servername ,pubkey)
+	// open localnode db, newlocalnode with db and privatekey, set FallbackIP 127.0.0.1 set NAT
+	if err := srv.setupLocalNode(); err != nil { //设置localnode：pubkey, p2phandshake,db,privatekey, fallbackIP,NAT
 		return err
 	}
 	if srv.ListenAddr != "" {
@@ -478,22 +487,54 @@ func (srv *Server) Start() (err error) {
 			return err
 		}
 	}
+	// 设置发现，同时也会开启discovery
 	if err := srv.setupDiscovery(); err != nil {
 		return err
 	}
+	// 将自己注册到解析中 eid固定为20B的222
+	// 获得本地cid，ip
+	// eid := []byte{222, 0xff, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22}
+	// eidstr :=
+	/////////////////////////////////////////////////////////////////////////////
+	nodeid := srv.localnode.Node().NodeID()
+	fmt.Println("nodeid: ", nodeid)
+
+	// enode:= srv.localnode.Node().URLv4()
+	// Seaep_register_with_IP_enode()
+	StaticNodeList := Seaep_Register_and_Resolve(nodeid)
+
+	/////////////////////////////////////////////////////////////////////////////
+
+	// 增加通过解析获得peerList,需要转成完整的string
+	// var StaticNodeList []string
+	// StaticNodeList = seaep_resolve()
+	for i := 0; i < len(StaticNodeList); i++ {
+		url := StaticNodeList[i]
+		node, err := enode.Parse(enode.ValidSchemes, url)
+		if err != nil {
+			return err
+		}
+		srv.StaticNodes = append(srv.StaticNodes, node)
+	}
+
+	// 连接管理
 	srv.setupDialScheduler()
 
 	srv.loopWG.Add(1)
-	go srv.run()
+	// 建立TCP连接请求
+	go srv.run() //main loop
 	return nil
 }
 
+// setup localnode pubkey, create devp2p handshake(using protoHandshake with servername ,pubkey)
+// open localnode db, newlocalnode with db and privatekey, set FallbackIP 127.0.0.1
+// set NAT
 func (srv *Server) setupLocalNode() error {
 	// Create the devp2p handshake.
 	pubkey := crypto.FromECDSAPub(&srv.PrivateKey.PublicKey)
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: pubkey[1:]}
 	for _, p := range srv.Protocols {
-		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
+		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap()) //所有server protocols的cap全部加到handshake的caps上维护成一个列表
 	}
 	sort.Sort(capsByNameAndVersion(srv.ourHandshake.Caps))
 
@@ -503,7 +544,7 @@ func (srv *Server) setupLocalNode() error {
 		return err
 	}
 	srv.nodedb = db
-	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey)
+	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey) //create the new node
 	srv.localnode.SetFallbackIP(net.IP{127, 0, 0, 1})
 	// TODO: check conflicts
 	for _, p := range srv.Protocols {
@@ -533,7 +574,7 @@ func (srv *Server) setupLocalNode() error {
 }
 
 func (srv *Server) setupDiscovery() error {
-	srv.discmix = enode.NewFairMix(discmixTimeout)
+	srv.discmix = enode.NewFairMix(discmixTimeout) //????均匀获取各节点的信息
 
 	// Add protocol-specific discovery sources.
 	added := make(map[string]bool)
@@ -545,21 +586,21 @@ func (srv *Server) setupDiscovery() error {
 	}
 
 	// Don't listen on UDP endpoint if DHT is disabled.
-	if srv.NoDiscovery && !srv.DiscoveryV5 {
+	if srv.NoDiscovery && !srv.DiscoveryV5 { //若设置了nodiscovery或者v5版，则不UDP终端listen
 		return nil
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr) //解析udp地址
 	if err != nil {
 		return err
 	}
-	conn, err := net.ListenUDP("udp", addr)
+	conn, err := net.ListenUDP("udp", addr) //打开udp监听
 	if err != nil {
 		return err
 	}
-	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	srv.log.Debug("UDP listener up", "addr", realaddr)
-	if srv.NAT != nil {
+	realaddr := conn.LocalAddr().(*net.UDPAddr)                      //刚打开的udplisten的localaddress，应该是实际监听的地址
+	srv.log.Debug("UDP listener up", "addr", "实际realaddr", realaddr) //增加 "实际realaddr"
+	if srv.NAT != nil {                                              //若设置了NAT穿透，则设置映射端口等
 		if !realaddr.IP.IsLoopback() {
 			srv.loopWG.Add(1)
 			go func() {
@@ -585,7 +626,12 @@ func (srv *Server) setupDiscovery() error {
 			Unhandled:   unhandled,
 			Log:         srv.log,
 		}
-		ntab, err := discover.ListenV4(conn, srv.localnode, cfg)
+		//增加显示Bootnodes
+		log.Info("show bootnodes:")
+		for i := 0; i < len(cfg.Bootnodes); i++ {
+			log.Info("Bootnode", cfg.Bootnodes[i].String())
+		}
+		ntab, err := discover.ListenV4(conn, srv.localnode, cfg) //得到一个UDPv4对象，!!!!!!!!!!!!!!
 		if err != nil {
 			return err
 		}
@@ -655,20 +701,20 @@ func (srv *Server) maxDialedConns() (limit int) {
 	return limit
 }
 
-func (srv *Server) setupListening() error {
+func (srv *Server) setupListening() error { //设置TCP监听
 	// Launch the listener.
 	listener, err := srv.listenFunc("tcp", srv.ListenAddr)
 	if err != nil {
 		return err
 	}
 	srv.listener = listener
-	srv.ListenAddr = listener.Addr().String()
+	srv.ListenAddr = listener.Addr().String() //上面设置逻辑应该重复了？这里的addr感觉是从自己这里走一圈又获取回来的
 
 	// Update the local node record and map the TCP listening port if NAT is configured.
-	if tcp, ok := listener.Addr().(*net.TCPAddr); ok {
+	if tcp, ok := listener.Addr().(*net.TCPAddr); ok { //得到TCP<ipaddr:port:zone>
 		srv.localnode.Set(enr.TCP(tcp.Port))
-		if !tcp.IP.IsLoopback() && srv.NAT != nil {
-			srv.loopWG.Add(1)
+		if !tcp.IP.IsLoopback() && srv.NAT != nil { //设置NAT
+			srv.loopWG.Add(1) //loopWaitGroup作用？ 是sync.WaitGroup
 			go func() {
 				nat.Map(srv.NAT, srv.quit, "tcp", tcp.Port, tcp.Port, "ethereum p2p")
 				srv.loopWG.Done()
@@ -692,7 +738,11 @@ func (srv *Server) doPeerOp(fn peerOpFunc) {
 
 // run is the main loop of the server.
 func (srv *Server) run() {
+	srv.log.Info("Started P2P networking, show srv.localnode.Node().URLv4() in p2p.server.run()")
 	srv.log.Info("Started P2P networking", "self", srv.localnode.Node().URLv4())
+	ip, _ := srv.NAT.ExternalIP() //查看外部ip
+	srv.log.Info("NAT ExternalIP: ", ip)
+
 	defer srv.loopWG.Done()
 	defer srv.nodedb.Close()
 	defer srv.discmix.Close()

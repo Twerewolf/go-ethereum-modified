@@ -133,6 +133,16 @@ func (f *filterIter) Next() bool {
 // will be returned.
 //
 // It's safe to call AddSource and Close concurrently with Next.
+//FairMix聚合多个节点迭代器。混合器本身是一个迭代器
+//仅当调用Close时。通过AddSource添加的源迭代器将从
+//当它们结束时混合。
+//
+//Next返回的节点分布大致公平，即FairMix
+//试图同样频繁地从所有来源获取信息。但是，如果某个源速度较慢
+//并且不会在配置的超时内返回节点，即来自任何其他源的节点
+//将返回。
+//
+//调用AddSource并与Next同时关闭是安全的。
 type FairMix struct {
 	wg      sync.WaitGroup
 	fromAny chan *Node
@@ -157,6 +167,12 @@ type mixSource struct {
 // before giving up and taking a node from any other source. A good way to set the timeout
 // is deciding how long you'd want to wait for a node on average. Passing a negative
 // timeout makes the mixer completely fair.
+//NewFairMix创建一个混合器。
+//
+//超时指定混合器等待下一个公平选择的源的时间
+//在放弃并从任何其他源获取节点之前。设置超时的好方法
+//决定平均等待节点的时间。传递负片
+//超时使混合器完全公平。
 func NewFairMix(timeout time.Duration) *FairMix {
 	m := &FairMix{
 		fromAny: make(chan *Node),
