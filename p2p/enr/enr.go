@@ -150,14 +150,14 @@ func (r *Record) Load(e Entry) error {
 // encoded. If the record is signed, Set increments the sequence number and invalidates
 // the sequence number.
 func (r *Record) Set(e Entry) {
-	blob, err := rlp.EncodeToBytes(e)
+	blob, err := rlp.EncodeToBytes(e) //e直接编码为rlp格式，然后e的key能够e.ENRKey()判断得到,存在record pairs[]中。
 	if err != nil {
 		panic(fmt.Errorf("enr: can't encode %s: %v", e.ENRKey(), err))
 	}
 	r.invalidate()
 
 	pairs := make([]pair, len(r.pairs))
-	copy(pairs, r.pairs)
+	copy(pairs, r.pairs) // 不能直接添加吗
 	i := sort.Search(len(pairs), func(i int) bool { return pairs[i].k >= e.ENRKey() })
 	switch {
 	case i < len(pairs) && pairs[i].k == e.ENRKey():

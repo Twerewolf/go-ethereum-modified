@@ -44,6 +44,7 @@ const (
 // LocalNode produces the signed node record of a local node, i.e. a node run in the
 // current process. Setting ENR entries via the Set method updates the record. A new version
 // of the record is signed on demand when the Node method is called.
+// 通过Set方法更新set ENR entries条目
 type LocalNode struct {
 	cur atomic.Value // holds a non-nil node pointer while the record is up-to-date
 
@@ -73,7 +74,7 @@ func NewLocalNode(db *DB, key *ecdsa.PrivateKey) *LocalNode {
 		db:      db,
 		key:     key,
 		entries: make(map[string]enr.Entry),
-		endpoint4: lnEndpoint{
+		endpoint4: lnEndpoint{ // 4和6的tracker设置完全一致，但此处未设置IP和Port，是两个tracker
 			track: netutil.NewIPTracker(iptrackWindow, iptrackContactWindow, iptrackMinStatements),
 		},
 		endpoint6: lnEndpoint{
@@ -268,7 +269,7 @@ func (e *lnEndpoint) get() (newIP net.IP, newPort int) {
 	}
 	if e.staticIP != nil {
 		newIP = e.staticIP
-	} else if ip, port := predictAddr(e.track); ip != nil {
+	} else if ip, port := predictAddr(e.track); ip != nil { //若没有fallbackIP或staticIP，则 使用 track来predict
 		newIP = ip
 		newPort = port
 	}
@@ -278,7 +279,7 @@ func (e *lnEndpoint) get() (newIP net.IP, newPort int) {
 // predictAddr wraps IPTracker.PredictEndpoint, converting from its string-based
 // endpoint representation to IP and port types.
 func predictAddr(t *netutil.IPTracker) (net.IP, int) {
-	ep := t.PredictEndpoint()
+	ep := t.PredictEndpoint() // tracker直接就预测出来一个结果。。
 	if ep == "" {
 		return nil, 0
 	}
@@ -298,15 +299,17 @@ func (ln *LocalNode) sign() {
 	}
 
 	var r enr.Record
-	for _, e := range ln.entries {
-		r.Set(e)
+	// entry 条目
+	for _, e := range ln.entries { //record 符合ln的entries
+		r.Set(e) // 把所有条目存入record
 	}
 	ln.bumpSeq()
 	r.SetSeq(ln.seq)
 	if err := SignV4(&r, ln.key); err != nil {
 		panic(fmt.Errorf("enode: can't sign record: %v", err))
 	}
-	n, err := New(ValidSchemes, &r)
+	fmt.Println("create New Node using validschemes and &record, &record is: ", &r)
+	n, err := New(ValidSchemes, &r) // 用设置好的record创建新node，并在之后存入localnode的cur
 	if err != nil {
 		panic(fmt.Errorf("enode: can't verify local record: %v", err))
 	}

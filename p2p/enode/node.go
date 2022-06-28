@@ -44,7 +44,7 @@ func New(validSchemes enr.IdentityScheme, r *enr.Record) (*Node, error) {
 	if err := r.VerifySignature(validSchemes); err != nil {
 		return nil, err
 	}
-	node := &Node{r: *r}
+	node := &Node{r: *r} //addr
 	if n := copy(node.id[:], validSchemes.NodeAddr(&node.r)); n != len(ID{}) {
 		return nil, fmt.Errorf("invalid node ID length %d, need %d", n, len(ID{}))
 	}
@@ -105,10 +105,17 @@ func (n *Node) IP() net.IP {
 		ip4 enr.IPv4
 		ip6 enr.IPv6
 	)
-	if n.Load(&ip4) == nil {
+	if n.Load(&ip6) == nil { //改为优先载入ip6，才能默认使用ip6
+		fmt.Println("********************Node's ip6 address: ", net.IP(ip6), "********************")
+		return net.IP(ip6)
+	}
+
+	if n.Load(&ip4) == nil { //优先载入ip4
+		// fmt.Println("********************Node's ip4 address: ", net.IP(ip4), "********************")
 		return net.IP(ip4)
 	}
 	if n.Load(&ip6) == nil {
+		fmt.Println("********************Node's ip6 address: ", net.IP(ip6), "********************")
 		return net.IP(ip6)
 	}
 	return nil

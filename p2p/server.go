@@ -494,31 +494,31 @@ func (srv *Server) Start() (err error) {
 	if err := srv.setupDiscovery(); err != nil {
 		return err
 	}
-	// 将自己注册到解析中 eid固定为20B的222
-	// 获得本地cid，ip
-	// eid := []byte{222, 0xff, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22}
-	// eidstr :=
-	/////////////////////////////////////////////////////////////////////////////
-	nodeid := srv.localnode.Node().NodeID()
-	fmt.Println("nodeid: ", nodeid)
+	// // 将自己注册到解析中 eid固定为20B的222
+	// // 获得本地cid，ip
+	// // eid := []byte{222, 0xff, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22}
+	// // eidstr :=
+	// /////////////////////////////////////////////////////////////////////////////
+	// nodeid := srv.localnode.Node().NodeID()
+	// fmt.Println("nodeid: ", nodeid)
 
-	// enode:= srv.localnode.Node().URLv4()
-	// Seaep_register_with_IP_enode()
-	StaticNodeList := Seaep_Register_and_Resolve(nodeid)
+	// // enode:= srv.localnode.Node().URLv4()
+	// // Seaep_register_with_IP_enode()
+	// StaticNodeList := Seaep_Register_and_Resolve(nodeid)
 
-	/////////////////////////////////////////////////////////////////////////////
+	// /////////////////////////////////////////////////////////////////////////////
 
-	// 增加通过解析获得peerList,需要转成完整的string
-	// var StaticNodeList []string
-	// StaticNodeList = seaep_resolve()
-	for i := 0; i < len(StaticNodeList); i++ {
-		url := StaticNodeList[i]
-		node, err := enode.Parse(enode.ValidSchemes, url)
-		if err != nil {
-			return err
-		}
-		srv.StaticNodes = append(srv.StaticNodes, node)
-	}
+	// // 增加通过解析获得peerList,需要转成完整的string
+	// // var StaticNodeList []string
+	// // StaticNodeList = seaep_resolve()
+	// for i := 0; i < len(StaticNodeList); i++ {
+	// 	url := StaticNodeList[i]
+	// 	node, err := enode.Parse(enode.ValidSchemes, url)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	srv.StaticNodes = append(srv.StaticNodes, node)
+	// }
 
 	// 连接管理
 	srv.setupDialScheduler()
@@ -548,31 +548,57 @@ func (srv *Server) setupLocalNode() error {
 	}
 	srv.nodedb = db
 	srv.localnode = enode.NewLocalNode(db, srv.PrivateKey) //create the new node
-	srv.localnode.SetFallbackIP(net.IP{127, 0, 0, 1})
+
+	//////////////////////////////////////////////////////////
+	//默认server start的setupLocalNode时 设置fallback IP为 127.0.0.1
+	// 尝试修改为本地ipv6
+	// srv.localnode.SetStaticIP()
+	srv.localnode.SetFallbackIP(net.IP{127, 0, 0, 1}) //TJW server localnode ip， 如果endpoint prediction失败并且没有设置staticIP，则使用这里设置的fallbackIP
+	// srv.localnode.SetFallbackIP(net.IP{})
+
+	//////////////////////////////////////////////////////////
 	// TODO: check conflicts
 	for _, p := range srv.Protocols {
 		for _, e := range p.Attributes {
 			srv.localnode.Set(e)
 		}
 	}
+
 	switch srv.NAT.(type) {
 	case nil:
+		fmt.Println("server NAT type case: nil")
 		// No NAT interface, do nothing.
 	case nat.ExtIP:
-		// ExtIP doesn't block, set the IP right away.
+		fmt.Println("server NAT type case: ExtIP")
+		// ExtIP doesn't block, set the IP right away.立即设置IP
 		ip, _ := srv.NAT.ExternalIP()
-		srv.localnode.SetStaticIP(ip)
+		srv.localnode.SetStaticIP(ip) //确定外部IP，此处直接设置为静态s
 	default:
+		fmt.Println("server NAT type case: default")
+
 		// Ask the router about the IP. This takes a while and blocks startup,
 		// do it in the background.
-		srv.loopWG.Add(1)
-		go func() {
-			defer srv.loopWG.Done()
-			if ip, err := srv.NAT.ExternalIP(); err == nil {
-				srv.localnode.SetStaticIP(ip)
-			}
-		}()
+
+		// srv.loopWG.Add(1)
+		// go func() {
+		// 	defer srv.loopWG.Done()
+		// 	if ip, err := srv.NAT.ExternalIP(); err == nil {
+		// 		fmt.Println("server NAT setstaticIP: ", ip)
+		// 		srv.localnode.SetStaticIP(ip)
+		// 	}
+		// }()
+		static_ip_str := "2001:250:250:250:250:250:250:221"
+		static_ip := net.ParseIP(static_ip_str)
+		srv.localnode.SetStaticIP(static_ip)
+		fmt.Println("srv.localnode.SetStaticIP() ", srv.localnode.Node().URLv4())
 	}
+	//////////////////////////////////////////////////////////
+	//TJW：增加一个静态IP设置
+	static_ip_str := "2001:250:250:250:250:250:250:221"
+	static_ip := net.ParseIP(static_ip_str)
+	srv.localnode.SetStaticIP(static_ip)
+	fmt.Println(srv.localnode.Node().IP())
+	//////////////////////////////////////////////////////////
 	return nil
 }
 
@@ -601,10 +627,11 @@ func (srv *Server) setupDiscovery() error {
 	if err != nil {
 		return err
 	}
-	realaddr := conn.LocalAddr().(*net.UDPAddr)                      //刚打开的udplisten的localaddress，应该是实际监听的地址
-	srv.log.Debug("UDP listener up", "addr", "实际realaddr", realaddr) //增加 "实际realaddr"
-	if srv.NAT != nil {                                              //若设置了NAT穿透，则设置映射端口等
-		if !realaddr.IP.IsLoopback() {
+	realaddr := conn.LocalAddr().(*net.UDPAddr)                                       //刚打开的udplisten的localaddress，应该是实际监听的地址
+	srv.log.Info("UDP listener up", "addr", "实际realaddr", realaddr.IP, realaddr.Port) //增加 "实际realaddr"
+	if srv.NAT != nil {                                                               //若设置了NAT穿透，则设置映射端口等
+		fmt.Println("---------------TJW: server NAT exists---------------")
+		if !realaddr.IP.IsLoopback() { //若realaddr不是回环地址即127.0.0.1
 			srv.loopWG.Add(1)
 			go func() {
 				nat.Map(srv.NAT, srv.quit, "udp", realaddr.Port, realaddr.Port, "ethereum discovery")
@@ -741,10 +768,11 @@ func (srv *Server) doPeerOp(fn peerOpFunc) {
 
 // run is the main loop of the server.
 func (srv *Server) run() {
+	fmt.Println("server.run()")
 	srv.log.Info("Started P2P networking, show srv.localnode.Node().URLv4() in p2p.server.run()")
 	srv.log.Info("Started P2P networking", "self", srv.localnode.Node().URLv4())
-	ip, _ := srv.NAT.ExternalIP() //查看外部ip
-	srv.log.Info("NAT ExternalIP: ", ip)
+	// ip, _ := srv.NAT.ExternalIP() //查看外部ip
+	// srv.log.Info("NAT ExternalIP: ", ip)
 
 	defer srv.loopWG.Done()
 	defer srv.nodedb.Close()

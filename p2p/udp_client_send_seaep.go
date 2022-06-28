@@ -463,9 +463,9 @@ func Seaep_register_with_IP_enode(eid string, enode string, delayParameter int64
 	DevideLine("Seaep_register_with_IP_enode")
 	fmt.Println("enode register:", enode)
 	//enode分成2部分
-	// na_ip, _ := GetOutBoundIP()
+	na_ip, _ := GetOutBoundIP()
 	// na_ip := "111.111.111.111"
-	na_ip := "233.233.233.233"
+	// na_ip := "233.233.233.233"
 	cid1 := enode[:64]
 	cid2 := enode[64:]
 	Seaep_register_with_IP(1, eid, cid1, na_ip, delayParameter, tlv, ttl, isGlobalVisable, geoNeighborFlag, delayNeighborFlag, indexNeighborFlag)

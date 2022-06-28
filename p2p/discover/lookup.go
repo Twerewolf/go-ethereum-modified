@@ -68,6 +68,8 @@ func (it *lookup) run() []*enode.Node {
 
 // advance advances the lookup until any new nodes have been found.
 // It returns false when the lookup has ended.
+//advance将继续查找，直到找到任何新节点。
+//查找结束时返回false
 func (it *lookup) advance() bool {
 	for it.startQueries() {
 		select {

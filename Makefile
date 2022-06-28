@@ -12,6 +12,9 @@ geth:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+puppeth:
+	$(GORUN) build/ci.go install ./cmd/puppeth
+	@echo "Done building."
 
 all:
 	$(GORUN) build/ci.go install

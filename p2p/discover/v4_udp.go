@@ -295,7 +295,7 @@ func (t *UDPv4) newRandomLookup(ctx context.Context) *lookup {
 }
 
 func (t *UDPv4) newLookup(ctx context.Context, targetKey encPubkey) *lookup {
-	t.log.Info("newLookup")
+	t.log.Info("-------------newLookup-------------")
 	target := enode.ID(crypto.Keccak256Hash(targetKey[:]))
 	ekey := v4wire.Pubkey(targetKey)
 	it := newLookup(ctx, t.tab, target, func(n *node) ([]*node, error) { //创建一个新的*lookup对象，包含查询函数为findnode
@@ -333,7 +333,7 @@ func (t *UDPv4) findnode(toid enode.ID, toaddr *net.UDPAddr, target v4wire.Pubke
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
-	log.Info("findnode->send(Findnode) toaddr/toID/FindnodePacket.Target", toaddr.String(), toid.String(), target)
+	log.Info("findnode->send(Findnode) ", "toaddr:", toaddr.String(), "toID:", toid.String()) // "FindnodePacket.Target", target
 	// Ensure that callers don't see a timeout if the node actually responded. Since
 	// findnode can receive more than one neighbors response, the reply matcher will be
 	// active until the remote node sends enough nodes. If the remote end doesn't have

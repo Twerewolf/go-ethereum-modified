@@ -70,6 +70,11 @@ var (
 		"COPYING",
 		executablePath("geth"),
 	}
+	//增加单独编译puppeth
+	puppethArchiveFiles = []string{
+		"COPYING",
+		executablePath("puppeth"),
+	}
 
 	// Files that end up in the geth-alltools*.zip archive.
 	allToolsArchiveFiles = []string{
